@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>H2O — Solicitudes de Mercado</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@300;400;500;600&family=Fira+Mono:wght@400;500&display=swap');
+:root{--deep:#03162e;--ocean:#0a2f52;--mid:#0d4f8a;--aqua:#0ea5e9;--aqua2:#38bdf8;--white:#f8fbfe;--muted:#6b8fa8;--border:#1e3f5e;--card:#071e35;--card2:#0a2540;--accent:#00d4aa;--warn:#f59e0b;--danger:#ef4444;--text:#d8eaf6;--text2:#8cb4cc;--shadow:0 4px 24px rgba(0,0,0,0.4);}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Archivo',sans-serif;background:var(--deep);color:var(--text);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 20% -10%,rgba(14,165,233,0.12) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 80% 110%,rgba(0,212,170,0.08) 0%,transparent 55%);pointer-events:none;z-index:0;}
+header{position:sticky;top:0;z-index:200;background:rgba(3,22,46,0.96);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 2rem;height:64px;display:flex;align-items:center;justify-content:space-between;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-mark{width:38px;height:38px;background:linear-gradient(135deg,var(--aqua),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;box-shadow:0 0 16px rgba(14,165,233,0.4);}
+.logo-text{font-family:'Archivo Black',sans-serif;font-size:1.3rem;letter-spacing:0.06em;color:var(--white);line-height:1;}
+.logo-sub{font-size:0.62rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--aqua);font-weight:500;}
+.nav-tabs{display:flex;gap:6px;}
+.tab-btn{font-family:'Fira Mono',monospace;font-size:0.72rem;letter-spacing:0.07em;text-transform:uppercase;background:transparent;border:1px solid var(--border);color:var(--text2);padding:8px 18px;border-radius:6px;cursor:pointer;transition:all 0.2s;}
+.tab-btn:hover{border-color:var(--aqua);color:var(--aqua);}
+.tab-btn.active{background:linear-gradient(135deg,var(--mid),var(--aqua));border-color:transparent;color:#fff;box-shadow:0 0 12px rgba(14,165,233,0.3);}
+.view{display:none;position:relative;z-index:1;animation:fadeIn 0.3s ease;}
+.view.active{display:block;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* HERO */
+.hero{background:linear-gradient(160deg,var(--ocean) 0%,var(--deep) 60%);border-bottom:1px solid var(--border);padding:3.5rem 2.5rem 2.8rem;position:relative;overflow:hidden;}
+.hero::after{content:'H\2082O';position:absolute;right:-1.5rem;top:50%;transform:translateY(-50%);font-family:'Archivo Black',sans-serif;font-size:9rem;color:rgba(14,165,233,0.05);pointer-events:none;}
+.hero::before{content:'';position:absolute;bottom:-1px;left:0;right:0;height:40px;background:var(--deep);clip-path:ellipse(55% 100% at 50% 100%);}
+.hero-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(14,165,233,0.12);border:1px solid rgba(14,165,233,0.25);border-radius:20px;padding:5px 14px;font-family:'Fira Mono',monospace;font-size:0.68rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--aqua2);margin-bottom:1.2rem;}
+.hero-badge::before{content:'●';font-size:0.5rem;color:var(--accent);animation:pulse 2s infinite;}
+.hero h1{font-family:'Archivo Black',sans-serif;font-size:2.2rem;line-height:1.1;color:var(--white);margin-bottom:0.7rem;}
+.hero h1 em{background:linear-gradient(90deg,var(--aqua),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-style:normal;}
+.hero p{color:var(--text2);font-size:0.93rem;max-width:500px;line-height:1.6;}
+
+/* ALERT BANNER */
+.alert-box{border-radius:10px;padding:1.2rem 1.5rem;margin:1.5rem auto;max-width:800px;display:flex;gap:12px;align-items:flex-start;}
+.alert-warn{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);}
+.alert-ok{background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.25);}
+.alert-err{background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);}
+.alert-box .ai{font-size:1.3rem;flex-shrink:0;}
+.alert-box .at{font-family:'Archivo Black',sans-serif;font-size:0.85rem;margin-bottom:3px;}
+.alert-warn .at{color:var(--warn);}
+.alert-ok .at{color:var(--accent);}
+.alert-err .at{color:#f87171;}
+.alert-box .ab{font-size:0.82rem;color:var(--text2);line-height:1.5;}
+.alert-box code{background:rgba(255,255,255,0.07);padding:1px 6px;border-radius:3px;font-family:'Fira Mono',monospace;font-size:0.76rem;color:var(--aqua2);}
+
+/* FORM */
+.form-wrap{max-width:800px;margin:0 auto;padding:1.8rem 2rem 2.5rem;}
+.form-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:2.5rem;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.form-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--aqua),var(--accent),var(--aqua));}
+.fsec{font-family:'Fira Mono',monospace;font-size:0.68rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--aqua);margin-bottom:1.2rem;padding-bottom:0.7rem;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+.fsec::before{content:'';width:14px;height:2px;background:var(--aqua);border-radius:2px;}
+.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem 1.6rem;margin-bottom:1.4rem;}
+.s2{grid-column:1/-1;}
+.fg{display:flex;flex-direction:column;gap:6px;}
+label{font-family:'Fira Mono',monospace;font-size:0.67rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text2);}
+.req{color:var(--aqua);}
+input,select,textarea{font-family:'Archivo',sans-serif;font-size:0.9rem;background:rgba(255,255,255,0.04);border:1px solid var(--border);border-radius:7px;padding:10px 13px;color:var(--text);outline:none;transition:border-color 0.2s,box-shadow 0.2s,background 0.2s;width:100%;}
+input::placeholder,textarea::placeholder{color:rgba(107,143,168,0.45);}
+input:focus,select:focus,textarea:focus{border-color:var(--aqua);background:rgba(14,165,233,0.06);box-shadow:0 0 0 3px rgba(14,165,233,0.12);}
+select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%230ea5e9' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;}
+select option{background:var(--card2);color:var(--text);}
+textarea{resize:vertical;min-height:80px;}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;}
+.prad{display:none;}
+.plbl{font-family:'Fira Mono',monospace;font-size:0.72rem;letter-spacing:0.05em;padding:7px 16px;border:1px solid var(--border);border-radius:30px;cursor:pointer;color:var(--text2);transition:all 0.18s;user-select:none;}
+.plbl:hover{border-color:var(--aqua);color:var(--aqua2);}
+#u-alta:checked+.plbl{background:rgba(239,68,68,0.15);border-color:#ef4444;color:#fca5a5;}
+#u-media:checked+.plbl{background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#fcd34d;}
+#u-baja:checked+.plbl{background:rgba(0,212,170,0.12);border-color:var(--accent);color:var(--accent);}
+.sbtn{width:100%;background:linear-gradient(135deg,var(--mid),var(--aqua));color:#fff;border:none;padding:14px;border-radius:9px;font-family:'Archivo Black',sans-serif;font-size:0.92rem;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;margin-top:1.4rem;box-shadow:0 4px 20px rgba(14,165,233,0.25);}
+.sbtn:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 28px rgba(14,165,233,0.35);}
+.sbtn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.spinner{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;vertical-align:middle;}
+.toast{display:none;border-radius:8px;padding:1rem 1.3rem;margin-top:1rem;font-size:0.88rem;text-align:center;font-weight:500;animation:fadeIn 0.3s;}
+.toast.ok{background:rgba(0,212,170,0.1);border:1px solid rgba(0,212,170,0.3);color:var(--accent);display:block;}
+.toast.err{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#fca5a5;display:block;}
+
+/* RECENT */
+.rw{max-width:800px;margin:0 auto;padding:0 2rem 3rem;}
+.slbl{font-family:'Fira Mono',monospace;font-size:0.67rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--text2);margin-bottom:0.9rem;display:flex;align-items:center;gap:10px;}
+.slbl::after{content:'';flex:1;height:1px;background:var(--border);}
+.elist{display:flex;flex-direction:column;gap:8px;}
+.ecard{background:var(--card2);border:1px solid var(--border);border-radius:9px;padding:1rem 1.3rem;display:grid;grid-template-columns:1fr auto;gap:3px 1rem;transition:border-color 0.15s;}
+.ecard:hover{border-color:rgba(14,165,233,0.3);}
+.ecn{font-weight:600;font-size:0.92rem;color:var(--white);}
+.ecb{font-family:'Fira Mono',monospace;font-size:0.75rem;color:var(--aqua);margin-top:1px;}
+.ecm{font-size:0.78rem;color:var(--text2);}
+.ecd{font-family:'Fira Mono',monospace;font-size:0.75rem;color:var(--muted);text-align:right;grid-row:1/4;align-self:center;}
+.badge{display:inline-block;padding:2px 9px;border-radius:12px;font-family:'Fira Mono',monospace;font-size:0.65rem;letter-spacing:0.05em;margin-left:4px;}
+.b-alta{background:rgba(239,68,68,0.15);color:#fca5a5;}
+.b-media{background:rgba(245,158,11,0.15);color:#fcd34d;}
+.b-baja{background:rgba(0,212,170,0.12);color:var(--accent);}
+.empty{text-align:center;padding:2.5rem;font-family:'Fira Mono',monospace;font-size:0.82rem;color:var(--muted);border:1px dashed var(--border);border-radius:9px;}
+
+/* LOGIN */
+.lview{min-height:calc(100vh - 64px);display:flex;align-items:center;justify-content:center;padding:2rem;}
+.lcard{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:3rem 3.2rem;max-width:400px;width:100%;box-shadow:var(--shadow);text-align:center;position:relative;overflow:hidden;}
+.lcard::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--aqua),var(--accent));}
+.licon{width:60px;height:60px;background:linear-gradient(135deg,var(--mid),var(--aqua));border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin:0 auto 1.4rem;box-shadow:0 0 20px rgba(14,165,233,0.3);}
+.lcard h2{font-family:'Archivo Black',sans-serif;font-size:1.4rem;color:var(--white);margin-bottom:.4rem;}
+.lcard .sub{color:var(--text2);font-size:0.85rem;margin-bottom:2rem;line-height:1.5;}
+.lerr{background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:7px;padding:9px 12px;color:#fca5a5;font-size:0.82rem;margin-bottom:1rem;display:none;}
+.lerr.show{display:block;}
+.lhint{margin-top:1.2rem;font-size:0.75rem;color:var(--muted);font-family:'Fira Mono',monospace;}
+
+/* DASHBOARD */
+.dh{background:var(--ocean);border-bottom:1px solid var(--border);padding:2rem 2.5rem 1.8rem;display:flex;align-items:flex-end;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.dh h1{font-family:'Archivo Black',sans-serif;font-size:1.8rem;color:var(--white);line-height:1.15;}
+.dh h1 em{background:linear-gradient(90deg,var(--aqua),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-style:normal;}
+.dh p{color:var(--text2);font-size:0.83rem;margin-top:4px;}
+.dacts{display:flex;gap:7px;flex-wrap:wrap;align-items:center;}
+.dbtn{font-family:'Fira Mono',monospace;font-size:0.7rem;letter-spacing:0.06em;text-transform:uppercase;border:1px solid var(--border);background:transparent;color:var(--text2);padding:8px 14px;border-radius:6px;cursor:pointer;transition:all 0.15s;}
+.dbtn:hover{border-color:var(--aqua2);color:var(--aqua2);}
+.dbtn:disabled{opacity:0.4;cursor:not-allowed;}
+.dbtn-ok{border-color:rgba(0,212,170,0.3);color:var(--accent);}
+.dbtn-ok:hover{background:rgba(0,212,170,0.08);}
+.dbtn-danger{border-color:rgba(239,68,68,0.4);color:#fca5a5;}
+.dbtn-danger:hover{background:rgba(239,68,68,0.1);border-color:#ef4444;}
+.dbody{padding:2rem 2.5rem 4rem;max-width:1200px;margin:0 auto;}
+
+/* SYNC STATUS BAR */
+.sbar{display:flex;align-items:center;gap:10px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:.8rem 1.2rem;margin-bottom:1.5rem;font-family:'Fira Mono',monospace;font-size:0.73rem;color:var(--text2);}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0;transition:background 0.3s;}
+.sdot.synced{background:var(--accent);}
+.sdot.syncing{background:var(--warn);animation:pulse 0.8s infinite;}
+.sdot.error{background:var(--danger);}
+.sbar-right{margin-left:auto;display:flex;gap:8px;}
+
+/* SETUP PANEL */
+.setup-panel{background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:1.8rem 2rem;margin-bottom:1.8rem;}
+.sp-title{font-family:'Archivo Black',sans-serif;font-size:1rem;color:var(--warn);margin-bottom:.4rem;}
+.sp-sub{font-size:0.83rem;color:#d4a96a;line-height:1.5;margin-bottom:1.2rem;}
+.sp-steps{display:flex;flex-direction:column;gap:14px;margin-bottom:1.4rem;}
+.sp-step{display:flex;gap:12px;align-items:flex-start;}
+.sp-num{background:rgba(245,158,11,0.2);color:var(--warn);font-family:'Fira Mono',monospace;font-size:0.7rem;font-weight:700;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;}
+.sp-txt{font-size:0.83rem;color:#d4a96a;line-height:1.6;}
+.sp-txt a{color:var(--aqua2);}
+.sp-txt code{background:rgba(245,158,11,0.15);padding:1px 7px;border-radius:3px;font-family:'Fira Mono',monospace;font-size:0.75rem;color:#fcd34d;}
+.url-row{display:flex;gap:8px;margin-top:.5rem;}
+.url-row input{flex:1;font-size:0.83rem;}
+.url-btn{font-family:'Fira Mono',monospace;font-size:0.72rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;background:var(--warn);color:#000;border:none;padding:0 18px;border-radius:7px;cursor:pointer;white-space:nowrap;transition:opacity 0.15s;}
+.url-btn:hover{opacity:.85;}
+.script-box{background:#020f07;border:1px solid #1a5e3a;border-radius:8px;padding:1rem;width:100%;height:200px;font-family:'Fira Mono',monospace;font-size:0.71rem;line-height:1.55;color:#a7f3c8;margin-top:.8rem;resize:none;display:none;}
+.script-box.open{display:block;}
+.show-script-btn{font-family:'Fira Mono',monospace;font-size:0.72rem;color:var(--aqua2);background:none;border:none;cursor:pointer;text-decoration:underline;padding:0;}
+.copy-btn{font-family:'Fira Mono',monospace;font-size:0.7rem;background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.3);color:var(--aqua2);padding:5px 12px;border-radius:5px;cursor:pointer;display:none;margin-top:6px;}
+.copy-btn.open{display:inline-block;}
+
+/* FILTROS */
+.fbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:1rem 1.3rem;margin-bottom:1.8rem;}
+.fbar label{font-family:'Fira Mono',monospace;font-size:0.67rem;letter-spacing:0.09em;text-transform:uppercase;color:var(--text2);white-space:nowrap;}
+.fbar select,.fbar input{font-size:0.83rem;padding:7px 10px;min-width:130px;background:rgba(255,255,255,0.04);}
+
+/* KPIs */
+.krow{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:1rem;margin-bottom:1.8rem;}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:1.4rem 1.6rem;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--aqua),transparent);}
+.klbl{font-family:'Fira Mono',monospace;font-size:0.64rem;letter-spacing:0.12em;text-transform:uppercase;color:var(--text2);margin-bottom:8px;}
+.kn{font-family:'Archivo Black',sans-serif;font-size:2.3rem;line-height:1;color:var(--white);}
+.kn.aq{color:var(--aqua2);} .kn.ac{color:var(--accent);} .kn.wn{color:var(--warn);} .kn.dn{color:#f87171;}
+.ksub{font-size:0.76rem;color:var(--text2);margin-top:5px;}
+
+/* CHARTS */
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.8rem;}
+@media(max-width:720px){.cgrid{grid-template-columns:1fr;}}
+.cc{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:1.6rem;box-shadow:var(--shadow);}
+.ct{font-family:'Archivo Black',sans-serif;font-size:0.85rem;color:var(--white);margin-bottom:1.3rem;display:flex;align-items:center;gap:8px;}
+.ct span{color:var(--aqua);}
+.bchart{display:flex;flex-direction:column;gap:11px;}
+.brow{display:grid;grid-template-columns:130px 1fr 35px;align-items:center;gap:10px;}
+.blbl{font-size:0.8rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text);}
+.blbl small{display:block;font-family:'Fira Mono',monospace;font-size:0.64rem;color:var(--text2);}
+.btrack{background:rgba(255,255,255,0.06);border-radius:4px;height:12px;overflow:hidden;}
+.bfill{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--mid),var(--aqua));transition:width 0.7s cubic-bezier(.4,0,.2,1);}
+.bval{font-family:'Fira Mono',monospace;font-size:0.75rem;color:var(--aqua);text-align:right;}
+.catlist{display:flex;flex-direction:column;gap:11px;}
+.catrow{display:flex;align-items:center;gap:10px;}
+.cdot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+.cname{font-size:0.84rem;flex:1;color:var(--text);}
+.ctrack{flex:2;background:rgba(255,255,255,0.06);border-radius:3px;height:8px;overflow:hidden;}
+.cfill{height:100%;border-radius:3px;}
+.cpct{font-family:'Fira Mono',monospace;font-size:0.74rem;color:var(--text2);min-width:56px;text-align:right;}
+.tbars{display:flex;align-items:flex-end;gap:8px;height:90px;}
+.tbw{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;height:100%;justify-content:flex-end;}
+.tb{width:100%;border-radius:4px 4px 0 0;background:linear-gradient(180deg,var(--aqua),var(--mid));min-height:4px;}
+.tb:hover{filter:brightness(1.3);}
+.tbl{font-family:'Fira Mono',monospace;font-size:0.6rem;color:var(--text2);}
+.bchips{display:flex;flex-wrap:wrap;gap:7px;}
+.bchip{background:rgba(14,165,233,0.08);border:1px solid rgba(14,165,233,0.2);border-radius:20px;padding:5px 13px;font-family:'Fira Mono',monospace;font-size:0.72rem;color:var(--aqua2);display:flex;align-items:center;gap:6px;}
+.bchip .cn{background:var(--aqua);color:var(--deep);border-radius:50%;width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:0.64rem;font-weight:700;flex-shrink:0;}
+
+/* TABLE */
+.tcard{background:var(--card);border:1px solid var(--border);border-radius:11px;box-shadow:var(--shadow);overflow:hidden;}
+.thbar{padding:1.2rem 1.6rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.8rem;}
+.ttitle{font-family:'Archivo Black',sans-serif;font-size:0.95rem;color:var(--white);}
+.cpill{background:rgba(14,165,233,0.1);border:1px solid rgba(14,165,233,0.25);font-family:'Fira Mono',monospace;font-size:0.67rem;letter-spacing:0.07em;color:var(--aqua2);padding:3px 10px;border-radius:12px;}
+.tw{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--card2);font-family:'Fira Mono',monospace;font-size:0.63rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text2);padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+td{padding:11px 14px;font-size:0.85rem;border-bottom:1px solid rgba(30,63,94,0.5);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(14,165,233,0.04);}
+.tdn{font-weight:600;color:var(--white);}
+.tdd{font-size:0.76rem;color:var(--text2);margin-top:2px;}
+.tdbr{font-family:'Fira Mono',monospace;font-size:0.75rem;color:var(--aqua);}
+.tdm{font-family:'Fira Mono',monospace;font-size:0.78rem;color:var(--text2);}
+.ud{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+.ctag{font-family:'Fira Mono',monospace;font-size:0.65rem;letter-spacing:0.04em;padding:2px 8px;border-radius:4px;display:inline-block;}
+.cq{background:rgba(139,92,246,0.15);color:#c4b5fd;}
+.cl{background:rgba(14,165,233,0.15);color:var(--aqua2);}
+.ce{background:rgba(245,158,11,0.15);color:#fcd34d;}
+.cr{background:rgba(0,212,170,0.12);color:var(--accent);}
+.cx{background:rgba(255,255,255,0.06);color:var(--text2);}
+.nodata{text-align:center;padding:3rem;font-family:'Fira Mono',monospace;font-size:0.82rem;color:var(--muted);}
+.ebar{display:flex;gap:8px;justify-content:flex-end;padding:1rem 1.4rem;border-top:1px solid var(--border);background:var(--card2);}
+.ebtn{font-family:'Fira Mono',monospace;font-size:0.68rem;letter-spacing:0.07em;text-transform:uppercase;border:1px solid var(--border);background:transparent;color:var(--text2);padding:7px 13px;border-radius:5px;cursor:pointer;transition:all 0.15s;}
+.ebtn:hover{border-color:var(--accent);color:var(--accent);}
+
+/* MODAL */
+.mbg{display:none;position:fixed;inset:0;background:rgba(3,22,46,0.7);backdrop-filter:blur(4px);z-index:500;align-items:center;justify-content:center;padding:1rem;}
+.mbg.open{display:flex;animation:fadeIn 0.2s;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:2.5rem;max-width:420px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,0.5);}
+.modal h3{font-family:'Archivo Black',sans-serif;font-size:1.15rem;color:var(--white);margin-bottom:.5rem;}
+.modal p{color:var(--text2);font-size:0.87rem;margin-bottom:1.6rem;line-height:1.5;}
+.mbtns{display:flex;gap:10px;justify-content:flex-end;}
+.mbtn2{font-family:'Fira Mono',monospace;font-size:0.75rem;letter-spacing:.05em;padding:9px 17px;border-radius:6px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);}
+.mbtn2-c{background:var(--danger);border-color:var(--danger);color:#fff;}
+
+::-webkit-scrollbar{width:6px;height:6px;}
+::-webkit-scrollbar-track{background:var(--deep);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+@media(max-width:600px){.fgrid{grid-template-columns:1fr;}.dbody{padding:1.2rem 1rem 2rem;}.dh{padding:1.5rem 1rem;}header{padding:0 1rem;}.hero{padding:2rem 1.2rem 2.2rem;}.form-wrap,.rw{padding-left:1rem;padding-right:1rem;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">💧</div>
+    <div>
+      <div class="logo-text">H2O</div>
+      <div class="logo-sub">Piscinas &amp; Accesorios</div>
+    </div>
+  </div>
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="switchView('comercial',this)">📋 Registrar</button>
+    <button class="tab-btn" onclick="switchView('admin',this)">🔐 Gerencia</button>
+  </div>
+</header>
+
+<!-- ══════════════════ VISTA COMERCIAL ══════════════════ -->
+<div id="v-comercial" class="view active">
+  <div class="hero">
+    <div class="hero-badge">Sistema activo · H2O</div>
+    <h1>Registro de<br><em>Demanda No Atendida</em></h1>
+    <p>Cuando un cliente solicite un producto que no manejamos o no tenemos en stock, regístralo aquí. Cada solicitud ayuda a identificar oportunidades de mercado.</p>
+  </div>
+
+  <div id="comercial-status-box"></div>
+
+  <div class="form-wrap">
+    <div class="form-card">
+      <div class="fsec">Datos del comercial</div>
+      <div class="fgrid" style="margin-bottom:1.8rem;">
+        <div class="fg"><label>Tu nombre <span class="req">*</span></label><input type="text" id="f-comercial" placeholder="Ej. Carlos Mora" /></div>
+        <div class="fg"><label>Fecha <span class="req">*</span></label><input type="date" id="f-fecha" /></div>
+      </div>
+      <div class="fsec">Información del producto solicitado</div>
+      <div class="fgrid">
+        <div class="fg s2"><label>Nombre del artículo / producto <span class="req">*</span></label><input type="text" id="f-articulo" placeholder="Ej. Célula de sal Hayward T-Cell-15" /></div>
+        <div class="fg"><label>Marca solicitada por el cliente</label><input type="text" id="f-marca" placeholder="Ej. Hayward, Pentair, Zodiac, HTH…" /></div>
+        <div class="fg"><label>Categoría <span class="req">*</span></label>
+          <select id="f-categoria">
+            <option value="">— Seleccionar —</option>
+            <option value="Químicos">🧪 Químicos</option>
+            <option value="Artículos de Limpieza">🪣 Artículos de Limpieza</option>
+            <option value="Equipos">⚙️ Equipos</option>
+            <option value="Repuestos">🔩 Repuestos</option>
+          </select>
+        </div>
+        <div class="fg"><label>Cantidad aproximada solicitada</label><input type="number" id="f-cantidad" placeholder="Ej. 3" min="1" /></div>
+        <div class="fg"><label>Precio de referencia del cliente (USD)</label><input type="number" id="f-precio" placeholder="Ej. 85.00" step="0.01" min="0" /></div>
+        <div class="fg s2"><label>Descripción / especificaciones adicionales</label><textarea id="f-descripcion" placeholder="Modelo exacto, medidas, uso específico, dónde lo vio el cliente…"></textarea></div>
+        <div class="fg"><label>Cliente (opcional)</label><input type="text" id="f-cliente" placeholder="Nombre o empresa" /></div>
+        <div class="fg"><label>Urgencia del cliente</label>
+          <div class="pill-row">
+            <input type="radio" name="urg" id="u-alta" value="Alta" class="prad">
+            <label for="u-alta" class="plbl">🔴 Alta</label>
+            <input type="radio" name="urg" id="u-media" value="Media" class="prad" checked>
+            <label for="u-media" class="plbl">🟡 Media</label>
+            <input type="radio" name="urg" id="u-baja" value="Baja" class="prad">
+            <label for="u-baja" class="plbl">🟢 Baja</label>
+          </div>
+        </div>
+      </div>
+      <button class="sbtn" id="submitBtn" onclick="submitForm()">💧 Registrar Solicitud</button>
+      <div class="toast" id="toast" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="rw">
+    <div class="slbl">Últimas solicitudes enviadas (este dispositivo)</div>
+    <div class="elist" id="myEntries"><div class="empty">Aún no hay solicitudes registradas.</div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ VISTA ADMIN ══════════════════ -->
+<div id="v-admin" class="view">
+  <div class="lview" id="loginScreen">
+    <div class="lcard">
+      <div class="licon">🔑</div>
+      <h2>Acceso Gerencia</h2>
+      <p class="sub">Ingresa tu contraseña para ver el dashboard de oportunidades de mercado H2O.</p>
+      <div class="lerr" id="loginErr">Contraseña incorrecta. Intenta nuevamente.</div>
+      <div class="fg" style="margin-bottom:1.2rem;text-align:left;">
+        <label>Contraseña</label>
+        <input type="password" id="adminPass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" />
+      </div>
+      <button class="sbtn" onclick="doLogin()">Ingresar al Dashboard</button>
+      <p class="lhint">Contraseña por defecto: <strong>H2O2024</strong></p>
+    </div>
+  </div>
+
+  <div id="dashScreen" style="display:none;">
+    <div class="dh">
+      <div>
+        <h1>Dashboard <em>H2O</em><br>Demanda No Atendida</h1>
+        <p id="dsub">Cargando datos…</p>
+      </div>
+      <div class="dacts">
+        <button class="dbtn dbtn-ok" id="refreshBtn" onclick="loadData()">🔄 Actualizar datos</button>
+        <button class="dbtn" onclick="exportCSV()">⬇ CSV</button>
+        <button class="dbtn" onclick="window.print()">🖨 Imprimir</button>
+        <button class="dbtn dbtn-danger" onclick="document.getElementById('clearModal').classList.add('open')">🗑 Limpiar cache</button>
+        <button class="dbtn" onclick="logout()" style="border-color:rgba(14,165,233,0.4);color:var(--aqua2);">Salir</button>
+      </div>
+    </div>
+
+    <div class="dbody">
+
+      <!-- SYNC BAR -->
+      <div class="sbar">
+        <div class="sdot" id="sdot"></div>
+        <span id="smsg">Iniciando…</span>
+        <div class="sbar-right">
+          <span id="slastupd" style="font-size:0.68rem;color:var(--muted);"></span>
+        </div>
+      </div>
+
+      <!-- SETUP PANEL -->
+      <div class="setup-panel" id="setupPanel">
+        <div class="sp-title">⚙️ Paso único de configuración — Base de datos central</div>
+        <div class="sp-sub">Conecta el sistema a Google Sheets para recibir todas las solicitudes de tus comerciales en tiempo real. Solo lo configuras una vez.</div>
+        <div class="sp-steps">
+          <div class="sp-step">
+            <div class="sp-num">1</div>
+            <div class="sp-txt">
+              Ve a <a href="https://sheets.new" target="_blank">sheets.new</a> y crea una hoja nueva. En la primera fila, agrega exactamente estas cabeceras (una por celda, de A a K):<br>
+              <code>Timestamp</code> <code>Fecha</code> <code>Comercial</code> <code>Articulo</code> <code>Marca</code> <code>Categoria</code> <code>Cantidad</code> <code>Precio</code> <code>Urgencia</code> <code>Cliente</code> <code>Descripcion</code>
+            </div>
+          </div>
+          <div class="sp-step">
+            <div class="sp-num">2</div>
+            <div class="sp-txt">
+              En la misma hoja, ve a <strong>Extensiones → Apps Script</strong>. Borra todo el contenido que hay y pega el siguiente código:<br>
+              <button class="show-script-btn" onclick="toggleScript()">▶ Mostrar / ocultar código Apps Script</button>
+              <textarea class="script-box" id="scriptBox" readonly></textarea>
+              <button class="copy-btn" id="copyBtn" onclick="copyScript()">📋 Copiar código</button>
+            </div>
+          </div>
+          <div class="sp-step">
+            <div class="sp-num">3</div>
+            <div class="sp-txt">
+              En Apps Script haz clic en <strong>Implementar → Nueva implementación</strong>. Tipo: <strong>Aplicación web</strong>. En "Quién tiene acceso" elige <strong>Cualquier persona</strong>. Haz clic en <strong>Implementar</strong>, autoriza, y copia la URL que aparece.
+            </div>
+          </div>
+          <div class="sp-step">
+            <div class="sp-num">4</div>
+            <div class="sp-txt">
+              Pega esa URL aquí y guarda:
+              <div class="url-row">
+                <input type="text" id="urlInput" placeholder="https://script.google.com/macros/s/…/exec" />
+                <button class="url-btn" onclick="saveUrl()">Guardar y conectar</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTROS -->
+      <div class="fbar">
+        <label>Mes:</label><select id="fMes" onchange="renderDash()"></select>
+        <label>Categoría:</label>
+        <select id="fCat" onchange="renderDash()">
+          <option value="all">Todas</option>
+          <option>Químicos</option><option>Artículos de Limpieza</option><option>Equipos</option><option>Repuestos</option>
+        </select>
+        <label>Urgencia:</label>
+        <select id="fUrg" onchange="renderDash()">
+          <option value="all">Todas</option><option>Alta</option><option>Media</option><option>Baja</option>
+        </select>
+        <label>Buscar:</label>
+        <input type="text" id="fSearch" placeholder="Artículo, marca, comercial…" oninput="renderDash()" style="min-width:190px;" />
+      </div>
+
+      <!-- KPIs -->
+      <div class="krow">
+        <div class="kpi"><div class="klbl">Total solicitudes</div><div class="kn aq" id="k-total">—</div><div class="ksub" id="k-total-s">en el período</div></div>
+        <div class="kpi"><div class="klbl">Productos únicos</div><div class="kn" id="k-uniq">—</div><div class="ksub">artículos distintos</div></div>
+        <div class="kpi"><div class="klbl">Más solicitado</div><div class="kn ac" id="k-top" style="font-size:1rem;margin-top:4px;">—</div><div class="ksub" id="k-top-s">—</div></div>
+        <div class="kpi"><div class="klbl">Urgencia alta</div><div class="kn dn" id="k-urg">—</div><div class="ksub">prioritarias</div></div>
+        <div class="kpi"><div class="klbl">Precio ref. prom.</div><div class="kn wn" id="k-precio">—</div><div class="ksub">USD promedio cliente</div></div>
+      </div>
+
+      <!-- CHARTS -->
+      <div class="cgrid">
+        <div class="cc"><div class="ct">🏆 <span>Top 8</span> más solicitados</div><div class="bchart" id="topChart"></div></div>
+        <div class="cc"><div class="ct">📦 <span>Por categoría</span></div><div class="catlist" id="catChart"></div></div>
+        <div class="cc"><div class="ct">🏷️ <span>Marcas</span> solicitadas</div><div class="bchips" id="brandChart"></div></div>
+        <div class="cc"><div class="ct">📅 <span>Tendencia</span> mensual</div><div class="tbars" id="trendChart"></div></div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="tcard">
+        <div class="thbar">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="ttitle">Todos los registros</div>
+            <span class="cpill" id="tblCount">— registros</span>
+          </div>
+          <div style="font-size:0.78rem;color:var(--text2);">Más recientes primero</div>
+        </div>
+        <div class="tw">
+          <table id="mainTbl">
+            <thead><tr><th>Artículo</th><th>Marca</th><th>Categoría</th><th>Cant.</th><th>Precio ref.</th><th>Urgencia</th><th>Comercial</th><th>Fecha</th><th>Cliente</th></tr></thead>
+            <tbody id="tblBody"></tbody>
+          </table>
+          <div class="nodata" id="noData" style="display:none;">Sin registros para los filtros seleccionados.</div>
+        </div>
+        <div class="ebar">
+          <button class="ebtn" onclick="exportCSV()">📥 Descargar CSV completo</button>
+          <button class="ebtn" onclick="window.print()">🖨 Imprimir</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="mbg" id="clearModal">
+  <div class="modal">
+    <h3>🗑 ¿Limpiar caché local?</h3>
+    <p>Esto borra los datos guardados en este navegador. Los datos en Google Sheets <strong>no se borran</strong>. Haz clic en "Actualizar datos" para volver a cargarlos.</p>
+    <div class="mbtns">
+      <button class="mbtn2" onclick="document.getElementById('clearModal').classList.remove('open')">Cancelar</button>
+      <button class="mbtn2 mbtn2-c" onclick="clearCache()">Sí, limpiar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════ CONFIG — CAMBIA AQUÍ ══════════ */
+const ADMIN_PASS = 'H2O2024';
+/* ══════════════════════════════════════════ */
+
+const KEY     = 'h2o_v3_data';
+const URL_KEY = 'h2o_v3_url';
+
+/* Apps Script code */
+const SCRIPT = `// H2O — Demanda No Atendida | Apps Script
+// INSTRUCCIONES:
+// 1. Pega este código en Extensiones → Apps Script de tu Google Sheet
+// 2. Implementar → Nueva implementación → Aplicación web
+// 3. Ejecutar como: Yo | Acceso: Cualquier persona → Implementar → Autorizar → Copiar URL
+
+const HOJA = 'Sheet1'; // Si tu hoja tiene otro nombre, cámbialo aquí
+
+function doGet(e) {
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA);
+  const rows = sh.getDataRange().getValues();
+  if (rows.length < 2) return json({ ok: true, data: [] });
+  const headers = rows[0].map(h => h.toString().trim());
+  const data = rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = row[i] !== undefined ? row[i].toString() : ''; });
+    return obj;
+  }).filter(r => r['Articulo'] || r['Artículo']);
+  return json({ ok: true, data: data, total: data.length });
+}
+
+function doPost(e) {
+  try {
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(HOJA);
+    const p = JSON.parse(e.postData.contents);
+    sh.appendRow([
+      new Date().toLocaleString('es-CR'),
+      p.fecha || '', p.comercial || '', p.articulo || '',
+      p.marca || '', p.categoria || '', p.cantidad || '',
+      p.precio || '', p.urgencia || 'Media',
+      p.cliente || '', p.descripcion || ''
+    ]);
+    return json({ ok: true });
+  } catch(err) {
+    return json({ ok: false, error: err.toString() });
+  }
+}
+
+function json(obj) {
+  return ContentService
+    .createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}`;
+
+/* ══════ STORAGE ══════ */
+const getData  = () => { try{ return JSON.parse(localStorage.getItem(KEY))||[]; }catch(e){return[];} };
+const setData  = d  => localStorage.setItem(KEY, JSON.stringify(d));
+const getUrl   = () => localStorage.getItem(URL_KEY)||'';
+
+/* ══════ NAV ══════ */
+function switchView(v, btn) {
+  document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('v-'+v).classList.add('active');
+  btn.classList.add('active');
+  if(v==='comercial') renderRecent();
+}
+
+/* ══════ INIT ══════ */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('f-fecha').value = isoToday();
+  document.getElementById('scriptBox').value = SCRIPT;
+  const saved = getUrl();
+  if(saved) document.getElementById('urlInput').value = saved;
+  checkComercialStatus();
+  renderRecent();
+});
+
+function checkComercialStatus() {
+  const box = document.getElementById('comercial-status-box');
+  if(!getUrl()) {
+    box.innerHTML = `<div class="alert-box alert-warn" style="margin-top:1.2rem;">
+      <div class="ai">⚙️</div>
+      <div><div class="at">Sistema no conectado aún</div>
+      <div class="ab">El administrador de H2O aún no ha activado la base de datos central. Tus registros se guardan en este dispositivo hasta que se configure. Contacta a tu supervisor.</div></div>
+    </div>`;
+  } else {
+    box.innerHTML = `<div class="alert-box alert-ok" style="margin-top:1.2rem;">
+      <div class="ai">✅</div>
+      <div><div class="at">Sistema activo — tus registros van directo a la base de datos</div>
+      <div class="ab">Cada solicitud que envíes se guarda automáticamente en la base de datos central de H2O.</div></div>
+    </div>`;
+  }
+}
+
+/* ══════ SUBMIT ══════ */
+async function submitForm() {
+  const com = fv('f-comercial'), art = fv('f-articulo'), cat = fv('f-categoria'), fec = fv('f-fecha');
+  if(!com||!art||!cat||!fec) { showToast('Completa los campos obligatorios: Nombre, Artículo, Categoría y Fecha.','err'); return; }
+
+  const urg = document.querySelector('input[name="urg"]:checked');
+  const entry = {
+    id: Date.now(), fecha:fec, comercial:com, articulo:art,
+    marca:fv('f-marca'), categoria:cat, cantidad:fv('f-cantidad'),
+    precio:fv('f-precio'), descripcion:fv('f-descripcion'),
+    cliente:fv('f-cliente'), urgencia: urg?urg.value:'Media'
+  };
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Enviando…';
+
+  const url = getUrl();
+  let sent = false;
+
+  if(url) {
+    try {
+      // Use a hidden form trick to POST without CORS issues to Apps Script
+      const resp = await postToSheet(url, entry);
+      sent = resp;
+    } catch(err) { console.warn('POST error:', err); }
+  }
+
+  // Always keep a local copy too
+  const d = getData(); d.unshift(entry); setData(d);
+
+  // Reset
+  ['f-articulo','f-marca','f-cantidad','f-precio','f-descripcion','f-cliente'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-categoria').value='';
+  btn.disabled=false; btn.innerHTML='💧 Registrar Solicitud';
+
+  if(url && sent) showToast('✅ Solicitud enviada exitosamente a la base de datos central de H2O.','ok');
+  else if(url && !sent) showToast('⚠️ Se guardó localmente pero no se pudo enviar a la nube. Verifica la conexión.','err');
+  else showToast('✅ Guardado localmente. El sistema aún no tiene base de datos central configurada.','ok');
+
+  renderRecent();
+}
+
+/* POST using no-cors (Apps Script accepts this) */
+async function postToSheet(url, data) {
+  try {
+    await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(data)
+    });
+    return true; // no-cors returns opaque response — if no exception, assume ok
+  } catch(e) { return false; }
+}
+
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.className = 'toast '+type;
+  t.style.display = 'block';
+  t.textContent = msg;
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>{ t.style.display='none'; }, 6000);
+}
+
+/* ══════ RECENT ══════ */
+function renderRecent() {
+  const list = document.getElementById('myEntries');
+  const recent = getData().slice(0,6);
+  if(!recent.length){ list.innerHTML='<div class="empty">Aún no hay solicitudes en este dispositivo.</div>'; return; }
+  list.innerHTML = recent.map(e=>`
+    <div class="ecard">
+      <div class="ecn">${e.articulo}</div>
+      ${e.marca?`<div class="ecb">🏷️ ${e.marca}</div>`:''}
+      <div class="ecm">${e.categoria} · ${e.comercial} <span class="badge b-${(e.urgencia||'media').toLowerCase()}">${e.urgencia}</span>${e.cantidad?' · '+e.cantidad+' unid.':''}</div>
+      <div class="ecd">${fmtDate(e.fecha)}</div>
+    </div>`).join('');
+}
+
+/* ══════ LOGIN ══════ */
+function doLogin() {
+  if(document.getElementById('adminPass').value === ADMIN_PASS) {
+    document.getElementById('loginScreen').style.display='none';
+    document.getElementById('dashScreen').style.display='block';
+    document.getElementById('loginErr').classList.remove('show');
+    const saved=getUrl();
+    if(saved){ document.getElementById('urlInput').value=saved; document.getElementById('setupPanel').style.display='none'; }
+    loadData();
+  } else {
+    document.getElementById('loginErr').classList.add('show');
+    document.getElementById('adminPass').value='';
+  }
+}
+function logout(){
+  document.getElementById('loginScreen').style.display='flex';
+  document.getElementById('dashScreen').style.display='none';
+  document.getElementById('adminPass').value='';
+}
+
+/* ══════ LOAD DATA FROM SHEET ══════ */
+async function loadData() {
+  const url = getUrl();
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled=true; btn.textContent='🔄 Cargando…';
+  setSyncState('syncing','Conectando con Google Sheets…');
+
+  if(!url) {
+    setSyncState('error','Sin URL configurada — configura la base de datos abajo');
+    document.getElementById('setupPanel').style.display='block';
+    btn.disabled=false; btn.textContent='🔄 Actualizar datos';
+    renderDash(); return;
+  }
+
+  document.getElementById('setupPanel').style.display='none';
+
+  try {
+    const res  = await fetch(url+'?nocache='+Date.now());
+    const json = await res.json();
+
+    if(json.ok && Array.isArray(json.data)) {
+      const mapped = json.data.map((r,i)=>({
+        id: i,
+        fecha:       cleanStr(r['Fecha']),
+        comercial:   cleanStr(r['Comercial']),
+        articulo:    cleanStr(r['Articulo']||r['Artículo']),
+        marca:       cleanStr(r['Marca']),
+        categoria:   cleanStr(r['Categoria']||r['Categoría']),
+        cantidad:    cleanStr(r['Cantidad']),
+        precio:      cleanStr(r['Precio']),
+        urgencia:    cleanStr(r['Urgencia'])||'Media',
+        cliente:     cleanStr(r['Cliente']),
+        descripcion: cleanStr(r['Descripcion']||r['Descripción'])
+      })).filter(e=>e.articulo).reverse();
+
+      setData(mapped);
+      const now = new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'});
+      setSyncState('synced',`✅ Sincronizado · ${mapped.length} registros cargados · Última actualización: ${now}`);
+      document.getElementById('slastupd').textContent = 'Actualizado '+now;
+    } else {
+      setSyncState('error','Respuesta inesperada del servidor. Verifica el Apps Script.');
+    }
+  } catch(err) {
+    setSyncState('error','No se pudo conectar con Google Sheets. Verifica la URL y que el Apps Script esté publicado correctamente.');
+    console.error(err);
+  }
+
+  btn.disabled=false; btn.textContent='🔄 Actualizar datos';
+  renderDash();
+}
+
+function setSyncState(state, msg) {
+  const dot = document.getElementById('sdot');
+  dot.className='sdot';
+  if(state==='syncing') dot.classList.add('syncing');
+  else if(state==='synced') dot.classList.add('synced');
+  else if(state==='error') dot.classList.add('error');
+  document.getElementById('smsg').textContent = msg;
+}
+
+/* ══════ SETUP ══════ */
+function saveUrl() {
+  const u = document.getElementById('urlInput').value.trim();
+  if(!u.startsWith('https://script.google.com')) { alert('La URL no parece válida. Debe empezar con https://script.google.com/macros/s/…'); return; }
+  localStorage.setItem(URL_KEY, u);
+  checkComercialStatus();
+  document.getElementById('setupPanel').style.display='none';
+  loadData();
+}
+function toggleScript() {
+  const b=document.getElementById('scriptBox'), c=document.getElementById('copyBtn');
+  b.classList.toggle('open'); c.classList.toggle('open');
+}
+function copyScript() {
+  const ta=document.getElementById('scriptBox'); ta.select(); document.execCommand('copy');
+  const btn=document.getElementById('copyBtn'); btn.textContent='✅ ¡Copiado!';
+  setTimeout(()=>btn.textContent='📋 Copiar código',2500);
+}
+
+/* ══════ DASHBOARD ══════ */
+const CCOLORS={'Químicos':'#a78bfa','Artículos de Limpieza':'#38bdf8','Equipos':'#fbbf24','Repuestos':'#34d399','':'#6b8fa8'};
+const CTAGS={'Químicos':'cq','Artículos de Limpieza':'cl','Equipos':'ce','Repuestos':'cr'};
+const URGC={Alta:'#f87171',Media:'#fcd34d',Baja:'#34d399'};
+
+function renderDash() {
+  const all = getData();
+  const months = [...new Set(all.map(e=>e.fecha?e.fecha.substring(0,7):'').filter(Boolean))].sort().reverse();
+  const fMes=document.getElementById('fMes');
+  const curMes=fMes.value||'all';
+  fMes.innerHTML='<option value="all">Todos los meses</option>'+months.map(m=>`<option value="${m}"${curMes===m?' selected':''}>${fmtMonth(m)}</option>`).join('');
+
+  let d=all;
+  const mes=fMes.value, cat=document.getElementById('fCat').value, urg=document.getElementById('fUrg').value, srch=document.getElementById('fSearch').value.toLowerCase();
+  if(mes!=='all') d=d.filter(e=>e.fecha&&e.fecha.startsWith(mes));
+  if(cat!=='all') d=d.filter(e=>e.categoria===cat);
+  if(urg!=='all') d=d.filter(e=>e.urgencia===urg);
+  if(srch) d=d.filter(e=>(e.articulo+e.marca+e.comercial+e.descripcion).toLowerCase().includes(srch));
+
+  // KPIs
+  set('k-total', d.length);
+  set('k-uniq', new Set(d.map(e=>e.articulo.toLowerCase())).size);
+  set('k-urg', d.filter(e=>e.urgencia==='Alta').length);
+  const topC=countBy(d,e=>e.articulo), topE=Object.entries(topC).sort((a,b)=>b[1]-a[1]);
+  if(topE.length){ const nm=topE[0][0]; set('k-top',nm.length>22?nm.substring(0,22)+'…':nm); set('k-top-s',topE[0][1]+' solicitudes'); }
+  else { set('k-top','—'); set('k-top-s','Sin datos'); }
+  const precios=d.filter(e=>e.precio&&parseFloat(e.precio)>0).map(e=>parseFloat(e.precio));
+  set('k-precio', precios.length?'$'+(precios.reduce((a,b)=>a+b,0)/precios.length).toFixed(2):'—');
+  set('k-total-s', mes!=='all'?fmtMonth(mes):'todos los períodos');
+  set('dsub', `${mes!=='all'?fmtMonth(mes)+' · ':''}${d.length} solicitudes ${mes!=='all'?'':'totales'}`);
+
+  // Top 8 bar
+  const top8=topE.slice(0,8), maxB=top8.length?top8[0][1]:1;
+  document.getElementById('topChart').innerHTML = top8.length?top8.map(([nm,cnt])=>{
+    const br=d.find(e=>e.articulo===nm&&e.marca)?.marca||'';
+    return`<div class="brow"><div class="blbl" title="${nm}">${nm.length>18?nm.substring(0,18)+'…':nm}${br?`<small>${br}</small>`:''}</div><div class="btrack"><div class="bfill" style="width:${(cnt/maxB*100).toFixed(1)}%"></div></div><div class="bval">${cnt}</div></div>`;
+  }).join(''):'<div class="nodata" style="padding:1rem">Sin datos</div>';
+
+  // Categorías
+  const catC=countBy(d,e=>e.categoria||'Sin categoría'), catE=Object.entries(catC).sort((a,b)=>b[1]-a[1]), tot=d.length||1;
+  document.getElementById('catChart').innerHTML=catE.length?catE.map(([c,n])=>`
+    <div class="catrow"><div class="cdot" style="background:${CCOLORS[c]||'#6b8fa8'}"></div><div class="cname">${c}</div>
+    <div class="ctrack"><div class="cfill" style="width:${(n/tot*100).toFixed(0)}%;background:${CCOLORS[c]||'#6b8fa8'}"></div></div>
+    <div class="cpct">${n} · ${(n/tot*100).toFixed(0)}%</div></div>`).join(''):'<div class="nodata" style="padding:1rem">Sin datos</div>';
+
+  // Marcas
+  const marcaC=countBy(d.filter(e=>e.marca),e=>e.marca), marcaE=Object.entries(marcaC).sort((a,b)=>b[1]-a[1]);
+  document.getElementById('brandChart').innerHTML=marcaE.length?marcaE.map(([m,n])=>`<div class="bchip"><span class="cn">${n}</span>${m}</div>`).join(''):'<div style="color:var(--muted);font-size:.82rem">Sin marcas registradas.</div>';
+
+  // Tendencia
+  const allM=[...new Set(all.map(e=>e.fecha?e.fecha.substring(0,7):'').filter(Boolean))].sort().slice(-12);
+  const maxT=Math.max(...allM.map(m=>all.filter(e=>e.fecha&&e.fecha.startsWith(m)).length),1);
+  document.getElementById('trendChart').innerHTML=allM.length?allM.map(m=>{
+    const c=all.filter(e=>e.fecha&&e.fecha.startsWith(m)).length;
+    return`<div class="tbw"><div class="tb" style="height:${Math.max((c/maxT*80),4).toFixed(0)}px" title="${fmtMonth(m)}: ${c}"></div><div class="tbl">${m.substring(5)}</div></div>`;
+  }).join(''):'<div style="color:var(--muted);font-size:.8rem">Sin datos</div>';
+
+  // Tabla
+  set('tblCount', d.length+' registros');
+  const tbody=document.getElementById('tblBody');
+  if(!d.length){
+    tbody.innerHTML=''; document.getElementById('noData').style.display='block';
+    document.querySelector('#mainTbl thead').style.display='none';
+  } else {
+    document.getElementById('noData').style.display='none';
+    document.querySelector('#mainTbl thead').style.display='';
+    tbody.innerHTML=d.map(e=>`<tr>
+      <td><div class="tdn">${e.articulo}</div>${e.descripcion?`<div class="tdd">${e.descripcion.substring(0,60)}${e.descripcion.length>60?'…':''}</div>`:''}</td>
+      <td class="tdbr">${e.marca||'—'}</td>
+      <td><span class="ctag ${CTAGS[e.categoria]||'cx'}">${e.categoria||'—'}</span></td>
+      <td class="tdm">${e.cantidad||'—'}</td>
+      <td class="tdm">${e.precio?'$'+parseFloat(e.precio).toFixed(2):'—'}</td>
+      <td><span class="ud" style="background:${URGC[e.urgencia]||'#aaa'}"></span>${e.urgencia||'—'}</td>
+      <td class="tdm">${e.comercial}</td>
+      <td class="tdm">${fmtDate(e.fecha)}</td>
+      <td class="tdm">${e.cliente||'—'}</td></tr>`).join('');
+  }
+}
+
+/* ══════ ACTIONS ══════ */
+function clearCache(){ setData([]); document.getElementById('clearModal').classList.remove('open'); renderDash(); }
+
+function exportCSV() {
+  const d=getData(); if(!d.length){ alert('No hay datos para exportar.'); return; }
+  const hdr=['Fecha','Artículo','Marca','Categoría','Cantidad','Precio Ref. USD','Urgencia','Comercial','Cliente','Descripción'];
+  const rows=d.map(e=>[e.fecha,e.articulo,e.marca,e.categoria,e.cantidad,e.precio,e.urgencia,e.comercial,e.cliente,e.descripcion].map(c=>`"${(c||'').toString().replace(/"/g,'""')}"`));
+  const csv='\ufeff'+[hdr.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+  a.download='H2O_demanda_'+isoToday()+'.csv'; a.click();
+}
+
+/* ══════ HELPERS ══════ */
+const fv       = id => document.getElementById(id).value.trim();
+const set      = (id,v) => document.getElementById(id).textContent=v;
+const isoToday = () => new Date().toISOString().split('T')[0];
+const cleanStr = v  => (v||'').toString().trim();
+const fmtDate  = d  => { if(!d)return'—'; const p=d.split('-'); if(p.length===3)return`${p[2]}/${p[1]}/${p[0]}`; return d; };
+const fmtMonth = m  => { if(!m)return''; const mn=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']; const p=m.split('-'); return`${mn[parseInt(p[1])-1]} ${p[0]}`; };
+function countBy(arr,fn){ return arr.reduce((a,e)=>{ const k=fn(e); a[k]=(a[k]||0)+1; return a; },{}); }
+</script>
+</body>
+</html>
